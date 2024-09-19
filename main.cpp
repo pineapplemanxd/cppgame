@@ -242,6 +242,7 @@ void game() {
         }
     }
 }
+//t
 void menu() {
     cout << "Welcome to the game!" << endl;
     cout << "1. Start Game" << endl;
