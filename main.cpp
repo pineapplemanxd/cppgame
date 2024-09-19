@@ -103,7 +103,6 @@ void game() {
     cout << "4. impossible" << endl;
     cin >> difficulty;
 
-    cout << "game started" << endl;
     cout << "you are drug dealer in the city" << endl;
     cout << "you have to sell drugs to people" << endl;
     cout << "you have to make money" << endl;
@@ -118,87 +117,18 @@ void game() {
             cout << "exit" << endl;
             cout << "inventory" << endl;
             cout << "stats" << endl;
-        } else if (command == "sell") {
-            cin >> argument >> countStr;
-            int sellCount = 0;
-            if (countStr == "all") {
-                sellCount = count_if(inventory.begin(), inventory.end(), [&](const shared_ptr<Drug>& drug) {
-                    return drug->getName() == argument;
-                });
-            } else {
-                sellCount = stoi(countStr);
+        } else if (command == "inventory") {
+            for (const auto& item : inventory) {
+                cout << item->getName() << endl;
             }
-            for (int i = 0; i < sellCount; ++i) {
-                auto it = find_if(inventory.begin(), inventory.end(), [&](const shared_ptr<Drug>& drug) {
-                    return drug->getName() == argument;
-                });
-                if (it != inventory.end()) {
-                    auto drug = *it;
-                    cout << "you sold " << drug->getName() << " for " << drug->getSellPrice() << "$" << endl;
-                    money += drug->getSellPrice();
-                    experience += drug->getExpGiven();
-                    if (experience >= exp_to_level) {
-                        level++;
-                        experience = 0;
-                        exp_to_level += 50;
-                    }
-                    inventory.erase(it);
-                    cout << "current money: " << money << endl;
-                    cout << "current experience: " << experience << endl;
-                    cout << "current level: " << level << endl;
-                } else {
-                    cout << "you don't have enough " << argument << endl;
-                    break;
-                }
-            }
-            // Random chance of event
-            if (getRandomNumber(1, 100) <= 20 + sellCount) { // Increased chance of event
-                if (!mathEvent()) {
-                    cout << "Game over. You got caught by the police." << endl;
-                    break;
-                }
-            }
-        } else if (command == "buy") {
-            cin >> argument >> countStr;
-            shared_ptr<Drug> drug;
-            if (argument == "weed") {
-                drug = make_shared<Weed>();
-            } else if (argument == "cocaine") {
-                drug = make_shared<Cocaine>();
-            } else if (argument == "heroin") {
-                drug = make_shared<Heroin>();
-            } else {
-                cout << "invalid drug" << endl;
-                continue;
-            }
-            int buyCount = 0;
-            if (countStr == "all") {
-                buyCount = money / drug->getBuyPrice();
-            } else {
-                buyCount = stoi(countStr);
-            }
-            if (level >= drug->getNeededLevel()) {
-                for (int i = 0; i < buyCount; ++i) {
-                    if (money >= drug->getBuyPrice()) {
-                        cout << "you bought " << drug->getName() << " for " << drug->getBuyPrice() << "$" << endl;
-                        money -= drug->getBuyPrice();
-                        cout << "current money: " << money << endl;
-                        inventory.push_back(drug);
-                    } else {
-                        cout << "not enough money" << endl;
-                        break;
-                    }
-                }
-                // Random chance of event
-                if (getRandomNumber(1, 100) <= 20 + buyCount) { // Increased chance of event
-                    if (!mathEvent()) {
-                        cout << "Game over. You got caught by the police." << endl;
-                        break;
-                    }
-                }
-            } else {
-                cout << "you need to be level " << drug->getNeededLevel() << " to buy " << drug->getName() << endl;
-            }
+        } else if (command == "stats") {
+            cout << "money: " << money << endl;
+            cout << "level: " << level << endl;
+            cout << "experience: " << experience << endl;
+            cout << "exp to level: " << exp_to_level << endl;
+        } else if (command == "exit") {
+            cout << "game exited" << endl;
+            break;
         } else if (command == "shop") {
             cout << "Available products for purchase:" << endl;
             vector<shared_ptr<Drug>> shopItems = { make_shared<Weed>(), make_shared<Cocaine>(), make_shared<Heroin>() };
@@ -209,38 +139,123 @@ void game() {
                     cout << item->getName() << " (Level " << item->getNeededLevel() << ") - " << item->getBuyPrice() << "$" << endl;
                 }
             }
-        } else if (command == "exit") {
-            cout << "game exited" << endl;
-            break;
-        } else if (command == "inventory") {
-            for (const auto& item : inventory) {
-                cout << item->getName() << endl;
+        } else if (command == "sell" || command == "buy") {
+            cin >> argument >> countStr;
+            try {
+                if (command == "sell") {
+                    int sellCount = 0;
+                    if (countStr == "all") {
+                        sellCount = count_if(inventory.begin(), inventory.end(), [&](const shared_ptr<Drug>& drug) {
+                            return drug->getName() == argument;
+                        });
+                    } else {
+                        sellCount = stoi(countStr);
+                    }
+                    int totalSold = 0;
+                    int totalMoneyEarned = 0;
+                    int totalExpGained = 0;
+                    for (int i = 0; i < sellCount; ++i) {
+                        auto it = find_if(inventory.begin(), inventory.end(), [&](const shared_ptr<Drug>& drug) {
+                            return drug->getName() == argument;
+                        });
+                        if (it != inventory.end()) {
+                            auto drug = *it;
+                            money += drug->getSellPrice();
+                            experience += drug->getExpGiven();
+                            totalMoneyEarned += drug->getSellPrice();
+                            totalExpGained += drug->getExpGiven();
+                            totalSold++;
+                            if (experience >= exp_to_level) {
+                                level++;
+                                experience = 0;
+                                exp_to_level += 50;
+                            }
+                            inventory.erase(it);
+                        } else {
+                            cout << "you don't have enough " << argument << endl;
+                            break;
+                        }
+                    }
+                    if (totalSold > 0) {
+                        cout << "you sold " << totalSold << " " << argument << "(s) for " << totalMoneyEarned << "$" << endl;
+                        cout << "current money: " << money << endl;
+                        cout << "current experience: " << experience << endl;
+                        cout << "current level: " << level << endl;
+                    }
+                    // Random chance of event
+                    if (getRandomNumber(1, 100) <= 20 + totalSold) { // Increased chance of event
+                        if (!mathEvent()) {
+                            cout << "Game over. You got caught by the police." << endl;
+                            break;
+                        }
+                    }
+                } else if (command == "buy") {
+                    shared_ptr<Drug> drug;
+                    if (argument == "weed") {
+                        drug = make_shared<Weed>();
+                    } else if (argument == "cocaine") {
+                        drug = make_shared<Cocaine>();
+                    } else if (argument == "heroin") {
+                        drug = make_shared<Heroin>();
+                    } else {
+                        cout << "invalid drug" << endl;
+                        continue;
+                    }
+                    int buyCount = 0;
+                    if (countStr == "all") {
+                        buyCount = money / drug->getBuyPrice();
+                    } else {
+                        buyCount = stoi(countStr);
+                    }
+                    int totalBought = 0;
+                    if (level >= drug->getNeededLevel()) {
+                        for (int i = 0; i < buyCount; ++i) {
+                            if (money >= drug->getBuyPrice()) {
+                                money -= drug->getBuyPrice();
+                                inventory.push_back(drug);
+                                totalBought++;
+                            } else {
+                                cout << "not enough money" << endl;
+                                break;
+                            }
+                        }
+                        if (totalBought > 0) {
+                            cout << "you bought " << totalBought << " " << drug->getName() << "(s) for " << totalBought * drug->getBuyPrice() << "$" << endl;
+                            cout << "current money: " << money << endl;
+                        }
+                        // Random chance of event
+                        if (getRandomNumber(1, 100) <= 20 + totalBought) { // Increased chance of event
+                            if (!mathEvent()) {
+                                cout << "Game over. You got caught by the police." << endl;
+                                break;
+                            }
+                        }
+                    } else {
+                        cout << "you need to be level " << drug->getNeededLevel() << " to buy " << drug->getName() << endl;
+                    }
+                }
+            } catch (const invalid_argument& e) {
+                cout << "invalid count argument" << endl;
             }
-        } else if (command == "stats") {
-            cout << "money: " << money << endl;
-            cout << "level: " << level << endl;
-            cout << "experience: " << experience << endl;
-            cout << "exp to level: " << exp_to_level << endl;
         } else {
             cout << "invalid command" << endl;
         }
     }
 }
-
 void menu() {
-    cout << "1. start game" << endl;
-    cout << "2. exit" << endl;
+    cout << "Welcome to the game!" << endl;
+    cout << "1. Start Game" << endl;
+    cout << "2. Exit" << endl;
     cin >> choice;
     if (choice == 1) {
-        cout << "game started" << endl;
         game();
     } else if (choice == 2) {
         cout << "game exited" << endl;
-    } else if (choice == 3) { //debug event
-        mathEvent();
+    } else {
+        cout << "invalid choice" << endl;
+        menu();
     }
 }
-
 int main() {
     menu();
     return 0;
